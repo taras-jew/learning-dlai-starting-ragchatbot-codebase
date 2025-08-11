@@ -5,7 +5,7 @@
     padding: 0;
 }
 
-/* CSS Variables */
+/* CSS Variables - Dark Theme (Default) */
 :root {
     --primary-color: #2563eb;
     --primary-hover: #1d4ed8;
@@ -22,6 +22,24 @@
     --focus-ring: rgba(37, 99, 235, 0.2);
     --welcome-bg: #1e3a5f;
     --welcome-border: #2563eb;
+}
+
+/* Light Theme Variables - Enhanced for Accessibility */
+[data-theme="light"] {
+    --primary-color: #1d4ed8;
+    --primary-hover: #1e40af;
+    --background: #ffffff;
+    --surface: #f8fafc;
+    --surface-hover: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #cbd5e1;
+    --user-message: #1d4ed8;
+    --assistant-message: #f8fafc;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    --focus-ring: rgba(29, 78, 216, 0.3);
+    --welcome-bg: #f0f9ff;
+    --welcome-border: #1d4ed8;
 }
 
 /* Base Styles */
@@ -46,9 +64,15 @@ body {
     padding: 0;
 }
 
-/* Header - Hidden */
+/* Header - Visible with Theme Toggle */
 header {
-    display: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 header h1 {
@@ -946,5 +970,206 @@ details[open] .suggested-header::before {
 @media (max-width: 1024px) {
     .sidebar {
         width: 280px;
+    }
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+}
+
+.theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.theme-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.theme-toggle:active {
+    transform: translateY(0);
+}
+
+/* Theme Toggle Icons */
+.theme-toggle .sun-icon,
+.theme-toggle .moon-icon {
+    position: absolute;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+}
+
+/* Default state: dark theme shows sun icon */
+.theme-toggle .sun-icon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+.theme-toggle .moon-icon {
+    opacity: 0;
+    transform: rotate(180deg) scale(0.8);
+}
+
+/* Light theme: show moon icon */
+[data-theme="light"] .theme-toggle .sun-icon {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.8);
+}
+
+[data-theme="light"] .theme-toggle .moon-icon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+/* Header info section */
+.header-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Mobile adjustments for theme toggle */
+@media (max-width: 768px) {
+    header {
+        padding: 1rem;
+    }
+    
+    .theme-toggle {
+        width: 44px;
+        height: 44px;
+        padding: 0.625rem;
+    }
+}
+
+/* Light Theme Specific Enhancements */
+[data-theme="light"] {
+    /* Enhanced input styling for better contrast */
+    #chatInput {
+        background: #ffffff;
+        border-color: #cbd5e1;
+        color: var(--text-primary);
+    }
+    
+    #chatInput:focus {
+        border-color: var(--primary-color);
+        background: #ffffff;
+    }
+    
+    #chatInput::placeholder {
+        color: #94a3b8;
+    }
+    
+    /* Improved sidebar contrast */
+    .sidebar {
+        background: #ffffff;
+        border-right-color: #e2e8f0;
+    }
+    
+    /* Enhanced message contrast */
+    .message.assistant .message-content {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: var(--text-primary);
+    }
+    
+    .message.user .message-content {
+        background: var(--user-message);
+        color: #ffffff;
+    }
+    
+    /* Better loading animation visibility */
+    .loading span {
+        background: var(--text-secondary);
+    }
+    
+    /* Improved source item contrast */
+    .source-item {
+        background-color: #ffffff;
+        border-color: #cbd5e1;
+    }
+    
+    .source-item:hover {
+        background-color: #f8fafc;
+        border-color: var(--primary-color);
+    }
+    
+    /* Enhanced button contrast */
+    .suggested-item {
+        background: #ffffff;
+        border-color: #cbd5e1;
+        color: var(--text-primary);
+    }
+    
+    .suggested-item:hover {
+        background: #f8fafc;
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+    
+    .new-chat-button:hover {
+        color: var(--primary-color);
+    }
+    
+    /* Stat items enhancement */
+    .stat-item {
+        background: #ffffff;
+        border-color: #e2e8f0;
+    }
+    
+    /* Course title items */
+    .course-title-item {
+        color: var(--text-primary);
+        border-bottom-color: #e2e8f0;
+    }
+    
+    /* Scrollbar styling for light theme */
+    .chat-messages::-webkit-scrollbar-track,
+    .sidebar::-webkit-scrollbar-track {
+        background: #f8fafc;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb,
+    .sidebar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb:hover,
+    .sidebar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    
+    /* Welcome message specific styling */
+    .message.welcome-message .message-content {
+        background: var(--welcome-bg);
+        border-color: #bfdbfe;
+        color: var(--text-primary);
+    }
+    
+    /* Enhanced error and success messages */
+    .error-message {
+        background: #fef2f2;
+        color: #dc2626;
+        border-color: #fecaca;
+    }
+    
+    .success-message {
+        background: #f0fdf4;
+        color: #16a34a;
+        border-color: #bbf7d0;
     }
 }
