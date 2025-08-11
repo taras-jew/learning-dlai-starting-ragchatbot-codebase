@@ -15,10 +15,12 @@ class SessionManager:
         self.sessions: Dict[str, List[Message]] = {}
         self.session_counter = 0
     
-    def create_session(self) -> str:
+    def create_session(self, session_id: str = None) -> str:
         """Create a new conversation session"""
-        self.session_counter += 1
-        session_id = f"session_{self.session_counter}"
+        if session_id is None:
+            self.session_counter += 1
+            session_id = f"session_{self.session_counter}"
+        
         self.sessions[session_id] = []
         return session_id
     

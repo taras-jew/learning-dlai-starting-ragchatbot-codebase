@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
+    newChatButton = document.getElementById('newChatButton');
     
     setupEventListeners();
     createNewSession();
@@ -28,6 +29,9 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
+    
+    // New chat button
+    newChatButton.addEventListener('click', handleNewChat);
     
     
     // Suggested questions
@@ -117,15 +121,35 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     messageDiv.id = `message-${messageId}`;
     
     // Convert markdown to HTML for assistant messages
-    const displayContent = type === 'assistant' ? marked.parse(content) : escapeHtml(content);
+    let displayContent;
+    if (type === 'assistant') {
+        // First convert text references to links, then process markdown
+        const contentWithLinks = convertReferencesToLinks(content);
+        displayContent = marked.parse(contentWithLinks);
+    } else {
+        displayContent = escapeHtml(content);
+    }
     
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        const sourcesHtml = sources.map((source, index) => {
+            const colorClass = `source-item-${(index % 6) + 1}`;
+            // Create clickable links with proper href or JavaScript click handlers
+            const href = source.startsWith('http') ? source : `#source-${index}`;
+            const clickHandler = source.startsWith('http') ? '' : ` onclick="handleSourceClick('${source}', ${index})"`;
+            
+            return `<div class="source-item ${colorClass}">
+                        <a href="${href}" class="source-link" title="View source: ${source}"${clickHandler} target="${source.startsWith('http') ? '_blank' : '_self'}">
+                            📄 ${source}
+                        </a>
+                     </div>`;
+        }).join('');
+        
         html += `
-            <details class="sources-collapsible">
-                <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+            <details class="sources-collapsible" open>
+                <summary class="sources-header">📚 Sources (${sources.length})</summary>
+                <div class="sources-content">${sourcesHtml}</div>
             </details>
         `;
     }
@@ -144,7 +168,64 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Function to convert text references to clickable links
+function convertReferencesToLinks(content) {
+    // Convert patterns like [Image #1], [Document #2], [File #3] etc. to clickable links
+    const referencePattern = /\[(Image|Document|File|Figure|Chart|Table)\s*#(\d+)\]/gi;
+    
+    return content.replace(referencePattern, (match, type, number) => {
+        const linkText = match; // Keep original text like [Image #1]
+        const href = `#${type.toLowerCase()}-${number}`;
+        return `<a href="${href}" class="reference-link" title="Click to view ${type} ${number}">${linkText}</a>`;
+    });
+}
+
+// Function to handle source clicks
+function handleSourceClick(source, index) {
+    console.log(`Clicked on source: ${source} (index: ${index})`);
+    
+    // You can customize this function to handle source clicks
+    // For now, we'll show an alert with the source information
+    alert(`Source Reference:\n\n${source}\n\nThis could be enhanced to show more details about the source or navigate to the specific content.`);
+    
+    // Alternatively, you could:
+    // - Open a modal with source details
+    // - Scroll to a specific part of the document
+    // - Load additional content related to this source
+    // - Send a request to the backend for more source information
+}
+
 // Removed removeMessage function - no longer needed since we handle loading differently
+
+// Handle new chat button click
+async function handleNewChat() {
+    // Clear current conversation
+    chatMessages.innerHTML = '';
+    
+    // Clear input
+    chatInput.value = '';
+    
+    // Reset session
+    currentSessionId = null;
+    
+    // Create new session with welcome message
+    addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+    
+    // Focus on input
+    chatInput.focus();
+    
+    // Optionally notify backend about session cleanup
+    try {
+        if (currentSessionId) {
+            await fetch(`${API_URL}/sessions/${currentSessionId}`, {
+                method: 'DELETE'
+            });
+        }
+    } catch (error) {
+        console.log('Session cleanup failed:', error);
+        // Non-critical error, continue anyway
+    }
+}
 
 async function createNewSession() {
     currentSessionId = null;
