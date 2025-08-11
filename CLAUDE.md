@@ -18,6 +18,24 @@ cd backend && uv run uvicorn app:app --reload --port 8000
 uv sync
 ```
 
+**Code quality tools:**
+```bash
+# Format code (black + isort)
+./scripts/format.sh
+
+# Run quality checks (flake8, isort, black)
+./scripts/lint.sh
+
+# Run complete quality pipeline (format + lint + test)
+./scripts/check-all.sh
+
+# Individual commands
+uv run black backend/ main.py          # Format code
+uv run isort backend/ main.py          # Sort imports
+uv run flake8 backend/ main.py         # Lint code
+uv run pytest backend/tests/ -v       # Run tests
+```
+
 **Environment setup:**
 Create `.env` file in root with:
 ```
@@ -35,7 +53,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 - Course documents are automatically loaded on server startup
 - Vector embeddings use sentence-transformers
 - Frontend uses relative API paths for proxy compatibility
-- No test framework configured - add testing commands to this file when implemented
+- Test framework: pytest configured with tests in backend/tests/
 - Use `uv` to run python files
 - Dont run the server using ./run.sh I will start it myself
 

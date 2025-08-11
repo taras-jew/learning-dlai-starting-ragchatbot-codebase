@@ -1,7 +1,8 @@
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 import chromadb
 from chromadb.config import Settings
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
 from models import Course, CourseChunk
 from sentence_transformers import SentenceTransformer
 
@@ -9,25 +10,29 @@ from sentence_transformers import SentenceTransformer
 @dataclass
 class SearchResults:
     """Container for search results with metadata"""
+
     documents: List[str]
     metadata: List[Dict[str, Any]]
     distances: List[float]
     error: Optional[str] = None
 
     @classmethod
-    def from_chroma(cls, chroma_results: Dict) -> 'SearchResults':
+    def from_chroma(cls, chroma_results: Dict) -> "SearchResults":
         """Create SearchResults from ChromaDB query results"""
         return cls(
-            documents=chroma_results['documents'][0] if chroma_results['documents'] else [
-            ],
-            metadata=chroma_results['metadatas'][0] if chroma_results['metadatas'] else [
-            ],
-            distances=chroma_results['distances'][0] if chroma_results['distances'] else [
-            ]
+            documents=(
+                chroma_results["documents"][0] if chroma_results["documents"] else []
+            ),
+            metadata=(
+                chroma_results["metadatas"][0] if chroma_results["metadatas"] else []
+            ),
+            distances=(
+                chroma_results["distances"][0] if chroma_results["distances"] else []
+            ),
         )
 
     @classmethod
-    def empty(cls, error_msg: str) -> 'SearchResults':
+    def empty(cls, error_msg: str) -> "SearchResults":
         """Create empty results with error message"""
         return cls(documents=[], metadata=[], distances=[], error=error_msg)
 
@@ -43,33 +48,37 @@ class VectorStore:
         self.max_results = max_results
         # Initialize ChromaDB client
         self.client = chromadb.PersistentClient(
-            path=chroma_path,
-            settings=Settings(anonymized_telemetry=False)
+            path=chroma_path, settings=Settings(anonymized_telemetry=False)
         )
 
         # Set up sentence transformer embedding function
-        self.embedding_function = chromadb.utils.embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=embedding_model
+        self.embedding_function = (
+            chromadb.utils.embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name=embedding_model
+            )
         )
 
         # Create collections for different types of data
         self.course_catalog = self._create_collection(
-            "course_catalog")  # Course titles/instructors
+            "course_catalog"
+        )  # Course titles/instructors
         self.course_content = self._create_collection(
-            "course_content")  # Actual course material
+            "course_content"
+        )  # Actual course material
 
     def _create_collection(self, name: str):
         """Create or get a ChromaDB collection"""
         return self.client.get_or_create_collection(
-            name=name,
-            embedding_function=self.embedding_function
+            name=name, embedding_function=self.embedding_function
         )
 
-    def search(self,
-               query: str,
-               course_name: Optional[str] = None,
-               lesson_number: Optional[int] = None,
-               limit: Optional[int] = None) -> SearchResults:
+    def search(
+        self,
+        query: str,
+        course_name: Optional[str] = None,
+        lesson_number: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> SearchResults:
         """
         Main search interface that handles course resolution and content search.
 
@@ -98,9 +107,7 @@ class VectorStore:
 
         try:
             results = self.course_content.query(
-                query_texts=[query],
-                n_results=search_limit,
-                where=filter_dict
+                query_texts=[query], n_results=search_limit, where=filter_dict
             )
             return SearchResults.from_chroma(results)
         except Exception as e:
@@ -109,30 +116,31 @@ class VectorStore:
     def _resolve_course_name(self, course_name: str) -> Optional[str]:
         """Use vector search to find best matching course by name"""
         try:
-            results = self.course_catalog.query(
-                query_texts=[course_name],
-                n_results=1
-            )
+            results = self.course_catalog.query(query_texts=[course_name], n_results=1)
 
-            if results['documents'][0] and results['metadatas'][0]:
+            if results["documents"][0] and results["metadatas"][0]:
                 # Return the title (which is now the ID)
-                return results['metadatas'][0][0]['title']
+                return results["metadatas"][0][0]["title"]
         except Exception as e:
             print(f"Error resolving course name: {e}")
 
         return None
 
-    def _build_filter(self, course_title: Optional[str], lesson_number: Optional[int]) -> Optional[Dict]:
+    def _build_filter(
+        self, course_title: Optional[str], lesson_number: Optional[int]
+    ) -> Optional[Dict]:
         """Build ChromaDB filter from search parameters"""
         if not course_title and lesson_number is None:
             return None
 
         # Handle different filter combinations
         if course_title and lesson_number is not None:
-            return {"$and": [
-                {"course_title": course_title},
-                {"lesson_number": lesson_number}
-            ]}
+            return {
+                "$and": [
+                    {"course_title": course_title},
+                    {"lesson_number": lesson_number},
+                ]
+            }
 
         if course_title:
             return {"course_title": course_title}
@@ -148,23 +156,27 @@ class VectorStore:
         # Build lessons metadata and serialize as JSON string
         lessons_metadata = []
         for lesson in course.lessons:
-            lessons_metadata.append({
-                "lesson_number": lesson.lesson_number,
-                "lesson_title": lesson.title,
-                "lesson_link": lesson.lesson_link
-            })
+            lessons_metadata.append(
+                {
+                    "lesson_number": lesson.lesson_number,
+                    "lesson_title": lesson.title,
+                    "lesson_link": lesson.lesson_link,
+                }
+            )
 
         self.course_catalog.add(
             documents=[course_text],
-            metadatas=[{
-                "title": course.title,
-                "instructor": course.instructor,
-                "course_link": course.course_link,
-                # Serialize as JSON string
-                "lessons_json": json.dumps(lessons_metadata),
-                "lesson_count": len(course.lessons)
-            }],
-            ids=[course.title]
+            metadatas=[
+                {
+                    "title": course.title,
+                    "instructor": course.instructor,
+                    "course_link": course.course_link,
+                    # Serialize as JSON string
+                    "lessons_json": json.dumps(lessons_metadata),
+                    "lesson_count": len(course.lessons),
+                }
+            ],
+            ids=[course.title],
         )
 
     def add_course_content(self, chunks: List[CourseChunk]):
@@ -173,20 +185,21 @@ class VectorStore:
             return
 
         documents = [chunk.content for chunk in chunks]
-        metadatas = [{
-            "course_title": chunk.course_title,
-            "lesson_number": chunk.lesson_number,
-            "chunk_index": chunk.chunk_index
-        } for chunk in chunks]
+        metadatas = [
+            {
+                "course_title": chunk.course_title,
+                "lesson_number": chunk.lesson_number,
+                "chunk_index": chunk.chunk_index,
+            }
+            for chunk in chunks
+        ]
         # Use title with chunk index for unique IDs
         ids = [
-            f"{chunk.course_title.replace(' ', '_')}_{chunk.chunk_index}" for chunk in chunks]
+            f"{chunk.course_title.replace(' ', '_')}_{chunk.chunk_index}"
+            for chunk in chunks
+        ]
 
-        self.course_content.add(
-            documents=documents,
-            metadatas=metadatas,
-            ids=ids
-        )
+        self.course_content.add(documents=documents, metadatas=metadatas, ids=ids)
 
     def clear_all_data(self):
         """Clear all data from both collections"""
@@ -204,8 +217,8 @@ class VectorStore:
         try:
             # Get all documents from the catalog
             results = self.course_catalog.get()
-            if results and 'ids' in results:
-                return results['ids']
+            if results and "ids" in results:
+                return results["ids"]
             return []
         except Exception as e:
             print(f"Error getting existing course titles: {e}")
@@ -215,8 +228,8 @@ class VectorStore:
         """Get the total number of courses in the vector store"""
         try:
             results = self.course_catalog.get()
-            if results and 'ids' in results:
-                return len(results['ids'])
+            if results and "ids" in results:
+                return len(results["ids"])
             return 0
         except Exception as e:
             print(f"Error getting course count: {e}")
@@ -225,18 +238,18 @@ class VectorStore:
     def get_all_courses_metadata(self) -> List[Dict[str, Any]]:
         """Get metadata for all courses in the vector store"""
         import json
+
         try:
             results = self.course_catalog.get()
-            if results and 'metadatas' in results:
+            if results and "metadatas" in results:
                 # Parse lessons JSON for each course
                 parsed_metadata = []
-                for metadata in results['metadatas']:
+                for metadata in results["metadatas"]:
                     course_meta = metadata.copy()
-                    if 'lessons_json' in course_meta:
-                        course_meta['lessons'] = json.loads(
-                            course_meta['lessons_json'])
+                    if "lessons_json" in course_meta:
+                        course_meta["lessons"] = json.loads(course_meta["lessons_json"])
                         # Remove the JSON string version
-                        del course_meta['lessons_json']
+                        del course_meta["lessons_json"]
                     parsed_metadata.append(course_meta)
                 return parsed_metadata
             return []
@@ -249,9 +262,9 @@ class VectorStore:
         try:
             # Get course by ID (title is the ID)
             results = self.course_catalog.get(ids=[course_title])
-            if results and 'metadatas' in results and results['metadatas']:
-                metadata = results['metadatas'][0]
-                return metadata.get('course_link')
+            if results and "metadatas" in results and results["metadatas"]:
+                metadata = results["metadatas"][0]
+                return metadata.get("course_link")
             return None
         except Exception as e:
             print(f"Error getting course link: {e}")
@@ -260,18 +273,19 @@ class VectorStore:
     def get_lesson_link(self, course_title: str, lesson_number: int) -> Optional[str]:
         """Get lesson link for a given course title and lesson number"""
         import json
+
         try:
             # Get course by ID (title is the ID)
             results = self.course_catalog.get(ids=[course_title])
-            if results and 'metadatas' in results and results['metadatas']:
-                metadata = results['metadatas'][0]
-                lessons_json = metadata.get('lessons_json')
+            if results and "metadatas" in results and results["metadatas"]:
+                metadata = results["metadatas"][0]
+                lessons_json = metadata.get("lessons_json")
                 if lessons_json:
                     lessons = json.loads(lessons_json)
                     # Find the lesson with matching number
                     for lesson in lessons:
-                        if lesson.get('lesson_number') == lesson_number:
-                            return lesson.get('lesson_link')
+                        if lesson.get("lesson_number") == lesson_number:
+                            return lesson.get("lesson_link")
             return None
         except Exception as e:
             print(f"Error getting lesson link: {e}")
